@@ -87,6 +87,7 @@ exclude_dirs=(--exclude='ClacketyClack Dist/' --exclude='ClacketyClack Git/'
 housekeeping_excludes=(--exclude='README.md' --exclude='CHANGELOG.md' --exclude='VERSION'
                        --exclude='.gitignore' --exclude='.gitattributes'
                        --exclude='build-zip.sh' --exclude='deploy/' --exclude='tools/'
+                       --exclude='screenshots/'
                        --exclude='package.json' --exclude='package-lock.json'
                        --exclude='*.example.*')
 

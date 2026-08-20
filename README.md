@@ -6,13 +6,13 @@ A full screen typing game drawn in a chunky cartoon style. Words tumble out of t
 
 **Play it now: [clacketyclack.gamelabs.gg](https://clacketyclack.gamelabs.gg)**
 
-<!-- screenshot: title menu goes here -->
+![The menu: mode picker, word length chips and the four speed keycaps](screenshots/menu.webp)
 
 ## The game
 
 Everything falls as a keycap. Type what is on the cap before it hits the water; finish a word and it pops in a shower of points, miss one and it splashes, costing you a heart. Lose all three and it is game over, with a review of the words that got away. Score is paced: the faster you clear letters, the bigger the multiplier, and every pop floats its points up off the cap so you can see the streak building.
 
-<!-- screenshot: gameplay with falling keycaps goes here -->
+![Mid-game on the moonlit theme: 'yesterday' falling with 'yester' already typed in accent orange](screenshots/gameplay.webp)
 
 ### Modes
 
@@ -36,7 +36,7 @@ Shape and colour lessons unlock their content in batches as you play, and quietl
 
 **Hard mode** is the toggle that turns lessons into tests: sneaky wrong words fall alongside the real targets, and typing one is a mistake with a corrective flash telling you what it actually was. Now you are being examined on the concept, not just the typing.
 
-<!-- screenshot: learn mode lesson cards go here -->
+![Learn mode's lesson cards: vowels, parts of speech, shapes and colours, with the hard mode toggle](screenshots/learn.webp)
 
 ### Speeds
 
