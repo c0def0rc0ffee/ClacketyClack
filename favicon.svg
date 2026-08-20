@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- ClacketyClack: a realistic keyboard keycap with a C on the top face.
+       Dark body with bevelled sides; the lighter face sits high, leaving a
+       deep bottom bevel as on a real key. Matches the PNG icons. -->
+  <defs>
+    <linearGradient id="side" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#223344"/>
+      <stop offset="1" stop-color="#080d13"/>
+    </linearGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4a6684"/>
+      <stop offset="1" stop-color="#24364a"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="10" fill="url(#side)" stroke="#060a0f" stroke-width="2.5"/>
+  <rect x="10" y="6" width="44" height="40" rx="7" fill="url(#face)" stroke="rgba(160,190,215,0.35)" stroke-width="1"/>
+  <text x="32" y="27" font-family="'Courier New', monospace" font-size="32" font-weight="bold" fill="#ffab3d" text-anchor="middle" dominant-baseline="central">C</text>
+</svg>

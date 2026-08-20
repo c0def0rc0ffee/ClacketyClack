@@ -1,0 +1,13 @@
+{
+  "name": "clacketyclack",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "deploy": "node tools/deploy-site.mjs",
+    "deploy:dry": "node tools/deploy-site.mjs --dry-run"
+  },
+  "devDependencies": {
+    "ssh2-sftp-client": "^12.1.1"
+  }
+}

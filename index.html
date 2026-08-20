@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clackety Clack</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <meta name="description" content="Clackety Clack is a fun and interactive typing game. Annoy your colleagues and test your switches with various difficulty levels." />
+    <meta name="author" content="robford.org" />
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+
+    <!-- In-game HUD -->
+    <div id="hud" class="hidden">
+      <div id="hudScore">Score: 0</div>
+      <div id="hudLevel"></div>
+      <div id="hudLives"></div>
+    </div>
+    <button id="soundToggle" class="hidden" type="button" aria-label="Toggle sound">&#128266;</button>
+    <button id="menuBtn" class="hidden" type="button" aria-label="Back to menu">Menu</button>
+    <div id="typed" class="hidden"></div>
+    <div id="lessonBanner" class="hidden"></div>
+    <div id="lessonMsg" class="hidden"></div>
+
+    <!-- Full screen menu -->
+    <div id="menu" class="overlay">
+      <div class="menu-header">
+        <canvas id="mascotL" class="mascot left" width="160" height="160"></canvas>
+        <div class="titles">
+          <h1 class="title">Clackety Clack</h1>
+          <p class="subtitle">Annoy your colleagues and test your switches.</p>
+        </div>
+        <canvas id="mascotR" class="mascot right" width="160" height="160"></canvas>
+      </div>
+
+      <div class="seg" id="modeSeg">
+        <button class="seg-btn selected" data-mode="words" type="button">Words</button>
+        <button class="seg-btn" data-mode="letters" type="button">Just Letters</button>
+        <button class="seg-btn" data-mode="learn" type="button">Learn</button>
+      </div>
+      <p class="blurb" id="modeBlurb">Type the falling words before they splash into the sea.</p>
+
+      <div class="learn-opts hidden" id="learnOpts">
+        <div class="lesson-grid">
+          <button class="lesson-card selected" data-lesson="vowels" type="button">
+            <span class="lesson-icon">aeiou</span>
+            <span class="lesson-name">Vowels</span>
+          </button>
+          <button class="lesson-card" data-lesson="noun" type="button">
+            <span class="lesson-icon">dog</span>
+            <span class="lesson-name">Nouns</span>
+          </button>
+          <button class="lesson-card" data-lesson="verb" type="button">
+            <span class="lesson-icon">jump</span>
+            <span class="lesson-name">Verbs</span>
+          </button>
+          <button class="lesson-card" data-lesson="adjective" type="button">
+            <span class="lesson-icon">big</span>
+            <span class="lesson-name">Adjectives</span>
+          </button>
+        </div>
+        <!-- Shape lessons on their own row: words above, shapes below. -->
+        <div class="lesson-grid">
+          <button class="lesson-card" data-lesson="shapes" type="button">
+            <span class="lesson-icon">&#9651;&#9633;&#9675;</span>
+            <span class="lesson-name">Shapes</span>
+          </button>
+          <button class="lesson-card" data-lesson="shapeshint" type="button">
+            <span class="lesson-icon">&#9651;c&#183;&#183;</span>
+            <span class="lesson-name">Shape Hints</span>
+          </button>
+          <button class="lesson-card" data-lesson="shapesmemory" type="button">
+            <span class="lesson-icon">&#9651;&#63;&#9675;</span>
+            <span class="lesson-name">Shape Memory</span>
+          </button>
+          <button class="lesson-card" data-lesson="shapestricky" type="button">
+            <span class="lesson-icon">&#9649;&#9671;&#9186;</span>
+            <span class="lesson-name">Tricky Shapes</span>
+          </button>
+        </div>
+        <!-- Colour lessons: third row. -->
+        <div class="lesson-grid">
+          <button class="lesson-card" data-lesson="colours" type="button">
+            <span class="lesson-icon">&#128308;&#128994;&#128309;</span>
+            <span class="lesson-name">Colours</span>
+          </button>
+          <button class="lesson-card" data-lesson="colourshint" type="button">
+            <span class="lesson-icon">&#128308;r&#183;&#183;</span>
+            <span class="lesson-name">Colour Hints</span>
+          </button>
+          <button class="lesson-card" data-lesson="coloursmemory" type="button">
+            <span class="lesson-icon">&#128308;&#63;&#128309;</span>
+            <span class="lesson-name">Colour Memory</span>
+          </button>
+        </div>
+        <button class="toggle" id="hardChip" type="button">
+          <span class="toggle-label">Hard mode: sneaky wrong words fall too</span>
+          <span class="toggle-state">OFF</span>
+        </button>
+      </div>
+
+      <!-- Word length, independent of speed. Words mode only: letters mode
+           has nothing to size, and lessons bring their own word lists. -->
+      <div class="len-opts" id="lenOpts">
+        <p class="len-head">Word length</p>
+        <div class="len-row" id="lenRow">
+          <button class="len-chip selected" data-len="mixed" type="button">Mixed</button>
+          <button class="len-chip" data-len="short" type="button">1-4</button>
+          <button class="len-chip" data-len="medium" type="button">5-7</button>
+          <button class="len-chip" data-len="long" type="button">8-12</button>
+          <button class="len-chip" data-len="huge" type="button">13+</button>
+        </div>
+      </div>
+
+      <p class="speed-head">Pick your speed</p>
+      <div class="levels-row">
+        <button class="keybtn easy" data-level="1" type="button">Easy</button>
+        <button class="keybtn medium" data-level="2" type="button">Medium</button>
+        <button class="keybtn hard" data-level="3" type="button">Hard</button>
+        <button class="keybtn ultimate" data-level="4" type="button">Ultimate Badass!</button>
+      </div>
+
+      <!-- Your best score on each level for the mode currently selected,
+           plus the account line. Filled by renderScores() in app.js. -->
+      <div class="scoreboard" id="scoreboard">
+        <p class="review-head">Your best scores</p>
+        <div class="best-row" id="bestRow"></div>
+        <p class="account-line" id="accountLine"></p>
+      </div>
+
+      <!-- Stamped with the real version by build-zip.sh when it stages the
+           deployable; stays "dev" when running straight from the repo. -->
+      <p class="version" id="version">dev</p>
+    </div>
+
+    <!-- Game over -->
+    <div id="gameover" class="overlay hidden">
+      <h1 class="title small">Game Over</h1>
+      <p id="finalScore" class="final-score"></p>
+      <p id="bestScore" class="best-score"></p>
+      <div id="earned" class="earned hidden"></div>
+      <div id="review" class="review hidden"></div>
+      <div class="levels narrow">
+        <button id="btnRestart" class="keybtn easy" type="button">Play Again</button>
+        <button id="btnMenu" class="keybtn neutral" type="button">Back to Menu</button>
+      </div>
+    </div>
+
+    <script src="wordDictionaries.js"></script>
+    <script src="platform.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

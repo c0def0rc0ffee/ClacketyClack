@@ -1,0 +1,646 @@
+/* Fonts (self-hosted) */
+@font-face {
+  font-family: 'Fredoka';
+  src: url('../font/fredoka-latin.woff2') format('woff2');
+  font-weight: 400 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Semi-Coder';
+  src: url('../font/Semi-Coder-Regular.otf') format('opentype');
+  font-display: swap;
+}
+
+:root {
+  --text: #e8eef4;
+  --muted: #b9c8d6;
+  --accent: #ffab3d;
+  --accent-glow: rgba(255, 171, 61, 0.5);
+  --easy: #4cc38a;
+  --medium: #ffb020;
+  --hard: #ff6b5e;
+  --ultimate: #b06bff;
+  --panel-line: rgba(255, 255, 255, 0.14);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: #1a2430;
+  font-family: 'Semi-Coder', 'Courier New', monospace;
+  color: var(--text);
+  user-select: none;
+}
+
+/* The whole game renders here, edge to edge */
+#game {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* HUD, floating straight on the scene like the Furballistics one */
+#hud {
+  position: fixed;
+  left: 16px;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+  pointer-events: none;
+}
+
+#hudScore { color: var(--accent); }
+#hudLevel { color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.15em; }
+#hudLives { font-size: 1rem; letter-spacing: 3px; }
+
+#soundToggle {
+  position: fixed;
+  right: 14px;
+  top: 12px;
+  border: none;
+  background: rgba(10, 17, 26, 0.45);
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--text);
+}
+#soundToggle.muted { opacity: 0.45; }
+
+/* The live typing buffer, floating above the sea */
+#typed {
+  position: fixed;
+  left: 50%;
+  bottom: 4vh;
+  transform: translateX(-50%);
+  font-size: 1.7rem;
+  font-weight: 600;
+  letter-spacing: 4px;
+  color: var(--accent);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  min-height: 2.2rem;
+  white-space: nowrap;
+}
+
+#typed::after {
+  content: '\258C';
+  margin-left: 2px;
+  animation: cc-blink 1s steps(1) infinite;
+}
+
+#typed.dead-end {
+  color: var(--hard);
+  animation: cc-shake 0.18s linear 2;
+}
+
+@keyframes cc-blink {
+  50% { opacity: 0; }
+}
+
+/* Learn mode: lesson banner across the top of the scene */
+#lessonBanner {
+  position: fixed;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  max-width: min(86vw, 62ch);
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: rgba(10, 17, 26, 0.55);
+  border: 1px solid var(--panel-line);
+  color: var(--muted);
+  font-size: 0.92rem;
+  letter-spacing: 0.3px;
+  text-align: center;
+  pointer-events: none;
+}
+
+#lessonBanner strong {
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-right: 0.4em;
+}
+
+/* Learn mode: corrective flash when a trap word is typed */
+#lessonMsg {
+  position: fixed;
+  left: 50%;
+  top: 17vh;
+  transform: translateX(-50%);
+  font-size: clamp(1.05rem, 3vw, 1.5rem);
+  font-weight: 600;
+  color: var(--hard);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.75);
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 0;
+}
+
+#lessonMsg.show {
+  animation: cc-lesson-flash 2.2s ease forwards;
+}
+
+@keyframes cc-lesson-flash {
+  0% { opacity: 0; transform: translate(-50%, -8px); }
+  8% { opacity: 1; transform: translate(-50%, 0); }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes cc-shake {
+  25% { transform: translateX(calc(-50% - 5px)); }
+  75% { transform: translateX(calc(-50% + 5px)); }
+}
+
+/* Full screen overlays: menu and game over. No boxes, the scene shows
+   through behind a soft vignette. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.4rem;
+  padding: 4vh 20px;
+  background: radial-gradient(ellipse at 50% 40%, rgba(8, 13, 20, 0.25), rgba(8, 13, 20, 0.66) 90%);
+  text-align: center;
+}
+
+/* Cartoon logo: fat rounded letters with a thick dark outline and a hard
+   drop, the same sticker look the Worms style titles use. */
+.title {
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: clamp(2.8rem, 10vw, 5.6rem);
+  line-height: 1.02;
+  text-transform: uppercase;
+  color: var(--accent);
+  letter-spacing: 1px;
+  -webkit-text-stroke: 2px #0c141c;
+  paint-order: stroke fill;
+  text-shadow:
+    0 6px 0 #0c141c,
+    0 10px 24px rgba(0, 0, 0, 0.55),
+    0 0 40px var(--accent-glow);
+}
+
+.title.small {
+  font-size: clamp(2.4rem, 8vw, 4rem);
+  color: var(--hard);
+  text-shadow:
+    0 5px 0 #0c141c,
+    0 9px 20px rgba(0, 0, 0, 0.55),
+    0 0 34px rgba(255, 107, 94, 0.55);
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: clamp(0.95rem, 2.5vw, 1.15rem);
+  letter-spacing: 0.4px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  margin-top: -0.6rem;
+}
+
+/* Title row: two keycap mascots flanking the logo, Furballistics style */
+.menu-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.titles {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mascot {
+  width: 96px;
+  height: 96px;
+}
+
+.mascot.left { transform: rotate(-7deg); }
+.mascot.right { transform: rotate(7deg); }
+
+@media (max-width: 560px) {
+  .mascot { width: 64px; height: 64px; }
+}
+
+/* Segmented mode picker: one pill row, solid accent for the selection */
+.seg {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(10, 17, 26, 0.62);
+  border: 1px solid var(--panel-line);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.seg-btn {
+  padding: 0.5rem 1.35rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.6px;
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.seg-btn:hover { color: var(--text); }
+
+.seg-btn.selected {
+  background: var(--accent);
+  color: #0c141c;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* One line under the mode row that explains the selection */
+.blurb {
+  color: var(--muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.3px;
+  min-height: 1.2em;
+  margin-top: -0.7rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* Learn mode: lesson cards, hover tilts like the Furballistics map cards */
+.learn-opts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.lesson-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.lesson-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 12px 18px 10px;
+  min-width: 108px;
+  border-radius: 14px;
+  border: 2px solid var(--panel-line);
+  background: rgba(15, 24, 34, 0.7);
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.lesson-card:hover {
+  border-color: var(--accent);
+  transform: scale(1.05) rotate(-1deg);
+}
+
+.lesson-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 20px -6px var(--accent-glow), 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* The card's picture is a tiny keycap, same dished face as the game's caps */
+.lesson-icon {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: linear-gradient(#243447, #16212e);
+  border: 1px solid var(--panel-line);
+  box-shadow: 0 3px 0 rgba(6, 11, 17, 0.85);
+  color: var(--text);
+  font-size: 0.95rem;
+  letter-spacing: 1px;
+}
+
+.lesson-card.selected .lesson-icon { color: var(--accent); }
+
+.lesson-name {
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.8px;
+  color: var(--text);
+}
+
+/* Hard mode toggle: a pill that goes red when the traps are live */
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.5rem 0.6rem 0.5rem 1.1rem;
+  border: 1px solid var(--panel-line);
+  border-radius: 999px;
+  background: rgba(10, 17, 26, 0.62);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.82rem;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+
+.toggle:hover { color: var(--text); }
+
+.toggle-state {
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 1px;
+  color: var(--text);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.toggle.on { border-color: var(--hard); color: var(--text); }
+
+.toggle.on .toggle-state {
+  background: var(--hard);
+  color: #fff;
+}
+
+/* Level buttons shaped like physical keycaps */
+.levels {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  width: min(78vw, 340px);
+}
+
+.levels.narrow { width: min(78vw, 300px); }
+
+/* Menu levels: one row of keycaps instead of a tall stack */
+.levels-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.7rem;
+  max-width: min(90vw, 620px);
+}
+
+.levels-row .keybtn { width: auto; padding: 0.85rem 1.5rem 0.95rem; }
+
+.keybtn {
+  width: 100%;
+  padding: 0.95rem 1rem 1.05rem;
+  border: none;
+  border-radius: 13px;
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #0c141c;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.12s ease;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.22),
+    0 5px 0 rgba(0, 0, 0, 0.42),
+    0 10px 20px -6px rgba(0, 0, 0, 0.65);
+}
+
+.keybtn:hover { transform: translateY(-2px); filter: brightness(1.06); }
+
+.keybtn:active {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2),
+    0 1px 0 rgba(0, 0, 0, 0.42),
+    0 4px 10px -6px rgba(0, 0, 0, 0.65);
+}
+
+.keybtn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.keybtn.easy { background: var(--easy); }
+.keybtn.medium { background: var(--medium); }
+.keybtn.hard { background: var(--hard); color: #fff; }
+.keybtn.ultimate { background: var(--ultimate); color: #fff; }
+.keybtn.neutral { background: #8ba0b3; }
+
+.final-score {
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  font-weight: 700;
+  color: var(--text);
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
+}
+
+.best-score {
+  color: var(--accent);
+  font-weight: 600;
+  margin-top: -1rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* End of round review: the words that got away */
+.review {
+  max-width: min(86vw, 56ch);
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: rgba(10, 17, 26, 0.55);
+  border: 1px solid var(--panel-line);
+  color: var(--muted);
+  font-size: 0.9rem;
+  letter-spacing: 0.3px;
+  line-height: 1.55;
+}
+
+.review-head {
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.72rem;
+  margin-bottom: 2px;
+}
+
+/* Menu scoreboard: your best on each level of the selected mode, plus who
+ * you are signed in as. Same panel recipe as the end of round review. */
+.scoreboard {
+  max-width: min(86vw, 60ch);
+  padding: 10px 18px 12px;
+  border-radius: 12px;
+  background: rgba(10, 17, 26, 0.55);
+  border: 1px solid var(--panel-line);
+  text-align: center;
+}
+
+.best-row {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin-top: 6px;
+}
+
+.best-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 5.5rem;
+}
+
+.best-label {
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.best-value {
+  color: var(--accent);
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.best-value.none { color: var(--muted); opacity: 0.6; }
+
+.account-line {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.3px;
+}
+
+.account-line a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--accent-glow);
+}
+
+.account-line a:hover { border-bottom-style: solid; }
+
+/* Commendations won by the round just finished, on the game over screen */
+.earned {
+  max-width: min(86vw, 56ch);
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: rgba(255, 171, 61, 0.1);
+  border: 1px solid var(--accent-glow);
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.earned strong { color: var(--accent); }
+
+@media (max-width: 560px) {
+  .best-row { gap: 6px 14px; }
+  .best-cell { min-width: 4.2rem; }
+  .best-value { font-size: 1rem; }
+}
+
+/* Word length picker: a quieter chip row than the mode pills, because it
+ * is a second axis rather than a second difficulty */
+.len-opts { text-align: center; }
+
+.len-head,
+.speed-head {
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  margin-bottom: 6px;
+}
+
+.speed-head { margin-top: -0.5rem; }
+
+.len-row {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.len-chip {
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: rgba(15, 24, 34, 0.7);
+  border: 2px solid var(--panel-line);
+  border-radius: 999px;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.len-chip:hover { border-color: var(--accent-glow); }
+
+.len-chip.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0c141c;
+  font-weight: 600;
+}
+
+/* In-game menu button, sitting beside the sound toggle */
+#menuBtn {
+  position: fixed;
+  top: 14px;
+  right: 66px;
+  z-index: 5;
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  background: rgba(10, 17, 26, 0.55);
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  padding: 7px 13px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+#menuBtn:hover { border-color: var(--accent); color: var(--accent); }
+
+.version {
+  color: var(--muted);
+  opacity: 0.5;
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+}
+
+@media (max-width: 560px) {
+  .len-chip { font-size: 0.78rem; padding: 4px 11px; }
+  #menuBtn { right: 60px; padding: 6px 10px; }
+}
+
+/* Second lesson row (the shapes): a touch of air between the word row
+ * above and this one */
+.lesson-grid + .lesson-grid { margin-top: 10px; }
