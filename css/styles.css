@@ -73,7 +73,6 @@ body {
   position: fixed;
   right: 14px;
   top: 12px;
-  border: none;
   background: rgba(10, 17, 26, 0.45);
   border: 1px solid var(--panel-line);
   border-radius: 10px;
@@ -597,7 +596,7 @@ body {
   border-radius: 999px;
   padding: 5px 14px;
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
 .len-chip:hover { border-color: var(--accent-glow); }
@@ -624,7 +623,7 @@ body {
   border-radius: 10px;
   padding: 7px 13px;
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: border-color 0.12s ease, color 0.12s ease;
 }
 
 #menuBtn:hover { border-color: var(--accent); color: var(--accent); }

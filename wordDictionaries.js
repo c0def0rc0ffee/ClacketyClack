@@ -1,5 +1,5 @@
-// Word list for ClacketyClack: one flat deduplicated array, bucketed by
-// length at runtime in app.js (easy <=4, medium 5-7, hard 8-12, ultimate 13+).
+// Word list for ClacketyClack: one flat deduplicated array, bucketed at
+// runtime by the word length picker in app.js (LENGTHS: 1-4, 5-7, 8-12, 13+).
 // The old per-level arrays carried hundreds of duplicates and mis-bucketed
 // lengths; this is the same vocabulary, cleaned.
 const WORDS = [

@@ -46,7 +46,7 @@ async function ccFetch(path, options) {
     }, options || {}));
     if (!res.ok) return null;
     return await res.json();
-  } catch (e) {
+  } catch {
     return null; // offline, CORS, blocked: the game does not care
   }
 }

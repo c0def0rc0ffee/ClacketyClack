@@ -83,11 +83,11 @@ const SPEEDS = {
  * Mixed is the default: the whole dictionary, longer words simply paying
  * more because they are more to type. */
 const LENGTHS = {
-  mixed:  { label: 'Mixed', hint: 'anything',      bucket: () => true },
-  short:  { label: '1-4',   hint: 'short words',   bucket: (w) => w.length <= 4 },
-  medium: { label: '5-7',   hint: 'medium words',  bucket: (w) => w.length >= 5 && w.length <= 7 },
-  long:   { label: '8-12',  hint: 'long words',    bucket: (w) => w.length >= 8 && w.length <= 12 },
-  huge:   { label: '13+',   hint: 'monsters',      bucket: (w) => w.length >= 13 },
+  mixed:  { label: 'Mixed', bucket: () => true },
+  short:  { label: '1-4',   bucket: (w) => w.length <= 4 },
+  medium: { label: '5-7',   bucket: (w) => w.length >= 5 && w.length <= 7 },
+  long:   { label: '8-12',  bucket: (w) => w.length >= 8 && w.length <= 12 },
+  huge:   { label: '13+',   bucket: (w) => w.length >= 13 },
 };
 
 /*
@@ -119,6 +119,11 @@ const SCORE = {
 const MAX_ACTIVE = 8;
 const LIVES = 3;
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
+
+/* The two ink colours everything on the canvas shares: the accent that
+ * lights up typed progress (and pays out the points), and the plain text. */
+const ACCENT = '#ffab3d';
+const INK = '#e8eef4';
 
 /* ------------------------------------------------------------------ *
  * DOM
@@ -414,34 +419,53 @@ function measureCap(text) {
   return Math.max(CAP_H, Math.ceil(ctx.measureText(text).width) + CAP_PAD_X * 2);
 }
 
-function roundRect(x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+/* Draw `disp` centred in a cap of width `w` at `x`, the first `typed`
+ * letters in the accent, the rest in plain ink at `restAlpha`. The caller
+ * sets the font; both the word caps and the shape name lines land here. */
+function drawTypedText(disp, typed, x, w, ty, restAlpha = 1) {
+  const done = disp.slice(0, typed);
+  const rest = disp.slice(typed);
+  let tx = x + (w - ctx.measureText(disp).width) / 2;
+  if (done) {
+    ctx.fillStyle = ACCENT;
+    ctx.fillText(done, tx, ty);
+    tx += ctx.measureText(done).width;
+  }
+  if (rest) {
+    ctx.globalAlpha = restAlpha;
+    ctx.fillStyle = INK;
+    ctx.fillText(rest, tx, ty);
+    ctx.globalAlpha = 1;
+  }
 }
 
 function drawCap(wrd) {
-  const { x, y, w } = wrd;
-  const h = wrd.h || CAP_H;
+  const { x, y, w, h } = wrd;
   // Key side / depth.
   ctx.fillStyle = 'rgba(6, 11, 17, 0.85)';
-  roundRect(x, y + 4, w, h, 9);
+  roundRect(ctx, x, y + 4, w, h, 9);
   ctx.fill();
   // Dished face.
   const face = ctx.createLinearGradient(0, y, 0, y + h);
   face.addColorStop(0, '#243447');
   face.addColorStop(1, '#16212e');
   ctx.fillStyle = face;
-  roundRect(x, y, w, h, 9);
+  roundRect(ctx, x, y, w, h, 9);
   ctx.fill();
   // Top highlight and hairline border.
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
   ctx.lineWidth = 1;
-  roundRect(x + 0.5, y + 0.5, w - 1, h - 1, 8.5);
+  roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, 8.5);
   ctx.stroke();
   if (wrd.shape) {
     // A drawn shape instead of text. The outline picks up the typed accent
@@ -455,17 +479,17 @@ function drawCap(wrd) {
       // A filled swatch: the colour itself is the prompt. The hairline
       // keeps black and white legible on the cap face, and typing
       // progress shows as the accent ring since the fill is spoken for.
-      roundRect(cx - 21, cy - 21, 42, 42, 10);
+      roundRect(ctx, cx - 21, cy - 21, 42, 42, 10);
       ctx.fillStyle = COLOURS[wrd.shape];
       ctx.fill();
-      ctx.strokeStyle = active ? '#ffab3d' : 'rgba(232, 238, 244, 0.55)';
+      ctx.strokeStyle = active ? ACCENT : 'rgba(232, 238, 244, 0.55)';
       ctx.lineWidth = active ? 3 : 1.5;
       ctx.stroke();
     } else {
       SHAPES[wrd.shape](ctx, cx, cy, 19);
       ctx.fillStyle = active ? 'rgba(255, 171, 61, 0.22)' : 'rgba(232, 238, 244, 0.1)';
       ctx.fill();
-      ctx.strokeStyle = active ? '#ffab3d' : '#e8eef4';
+      ctx.strokeStyle = active ? ACCENT : INK;
       ctx.lineWidth = 2.5;
       ctx.lineJoin = 'round';
       ctx.stroke();
@@ -489,21 +513,7 @@ function drawCap(wrd) {
       if (disp) {
         ctx.font = SHAPE_FONT;
         ctx.textBaseline = 'middle';
-        const done = disp.slice(0, wrd.typed);
-        const rest = disp.slice(wrd.typed);
-        let tx = x + (w - ctx.measureText(disp).width) / 2;
-        const ty = y + SHAPE_CAP_H + SHAPE_NAME_H / 2 - 3;
-        if (done) {
-          ctx.fillStyle = '#ffab3d';
-          ctx.fillText(done, tx, ty);
-          tx += ctx.measureText(done).width;
-        }
-        if (rest) {
-          ctx.globalAlpha = restAlpha;
-          ctx.fillStyle = '#e8eef4';
-          ctx.fillText(rest, tx, ty);
-          ctx.globalAlpha = 1;
-        }
+        drawTypedText(disp, wrd.typed, x, w, y + SHAPE_CAP_H + SHAPE_NAME_H / 2 - 3, restAlpha);
       }
     }
     return;
@@ -511,19 +521,7 @@ function drawCap(wrd) {
   // Text: the typed prefix lights up in accent orange.
   ctx.font = CAP_FONT;
   ctx.textBaseline = 'middle';
-  const full = wrd.text;
-  const done = full.slice(0, wrd.typed);
-  const rest = full.slice(wrd.typed);
-  const totalW = ctx.measureText(full).width;
-  let tx = x + (w - totalW) / 2;
-  const ty = y + h / 2 + 1;
-  if (done) {
-    ctx.fillStyle = '#ffab3d';
-    ctx.fillText(done, tx, ty);
-    tx += ctx.measureText(done).width;
-  }
-  ctx.fillStyle = '#e8eef4';
-  ctx.fillText(rest, tx, ty);
+  drawTypedText(wrd.text, wrd.typed, x, w, y + h / 2 + 1);
 }
 
 /* ------------------------------------------------------------------ *
@@ -580,11 +578,10 @@ function drawFloaters(dt) {
     ctx.lineWidth = 4;
     ctx.strokeStyle = 'rgba(12, 20, 28, 0.85)';
     ctx.strokeText(f.text, f.x, f.y);
-    ctx.fillStyle = '#ffab3d';
+    ctx.fillStyle = ACCENT;
     ctx.fillText(f.text, f.x, f.y);
   }
   ctx.restore();
-  ctx.globalAlpha = 1;
   floaters = floaters.filter((f) => f.life < f.max);
 }
 
@@ -617,7 +614,7 @@ function pickEntry() {
   if (mode === 'letters') {
     return { text: rand(LETTERS), isTarget: true, why: '' };
   }
-  if (mode === 'learn' && LESSONS[lesson].style === 'shapes') {
+  if (shapeStyle()) {
     // Pick from the unlocked batch, preferring shapes not already on
     // screen, weighted toward the ones that have splashed.
     const onScreen = new Set(words.map((w) => w.text));
@@ -724,7 +721,7 @@ function updateGame(dt) {
     wrd.age += dt;
     wrd.y += vy * dt;
     if (wrd.y + wrd.h >= kill) {
-      words.splice(words.indexOf(wrd), 1);
+      removeWord(wrd);
       if (!wrd.isTarget) {
         // A trap fell in untyped: exactly right, small splash, no penalty.
         burst(wrd.x + wrd.w / 2, kill + 4, theme.waterTop, 12, 180, true);
@@ -745,6 +742,10 @@ function updateGame(dt) {
       loseLife();
     }
   }
+}
+
+function removeWord(wrd) {
+  words.splice(words.indexOf(wrd), 1);
 }
 
 function loseLife() {
@@ -771,7 +772,7 @@ function scoreFor(wrd) {
 }
 
 function popWord(wrd) {
-  words.splice(words.indexOf(wrd), 1);
+  removeWord(wrd);
   const gain = scoreFor(wrd);
   score += gain;
   popped++;
@@ -790,8 +791,8 @@ function popWord(wrd) {
       activeShapes.push(shapeQueue.shift());
     }
   }
-  burst(wrd.x + wrd.w / 2, wrd.y + wrd.h / 2, '#ffab3d', 22, 330, false);
-  burst(wrd.x + wrd.w / 2, wrd.y + wrd.h / 2, '#e8eef4', 10, 220, false);
+  burst(wrd.x + wrd.w / 2, wrd.y + wrd.h / 2, ACCENT, 22, 330, false);
+  burst(wrd.x + wrd.w / 2, wrd.y + wrd.h / 2, INK, 10, 220, false);
   sfx.pop();
   refreshHud();
 }
@@ -810,7 +811,7 @@ function popAllMatching(list) {
 
 /* The player typed a hard mode trap: take points, explain the mistake. */
 function mistakePop(wrd) {
-  words.splice(words.indexOf(wrd), 1);
+  removeWord(wrd);
   score = Math.max(0, score - 10);
   burst(wrd.x + wrd.w / 2, wrd.y + wrd.h / 2, '#ff6b5e', 22, 300, false);
   sfx.buzz();
@@ -832,7 +833,7 @@ function refreshHud() {
   hudLevel.textContent = mode === 'learn'
     ? `${LESSONS[lesson].title}${hardMode ? ' (hard)' : ''} - ${SPEEDS[speed].label}`
     : `${SPEEDS[speed].label}${mode === 'letters' ? ' (letters)' : ` - ${LENGTHS[wordLen].label}`}`;
-  hudLives.textContent = '❤️'.repeat(lives) + '\u{1f5a4}'.repeat(LIVES - lives);
+  hudLives.textContent = '❤️'.repeat(lives) + '🖤'.repeat(LIVES - lives);
 }
 
 function setBuffer(v) {
@@ -1115,33 +1116,28 @@ const MODE_BLURBS = {
 };
 const modeBlurbEl = document.getElementById('modeBlurb');
 
-for (const btn of document.querySelectorAll('#modeSeg .seg-btn')) {
-  btn.addEventListener('click', () => {
-    for (const b of document.querySelectorAll('#modeSeg .seg-btn')) b.classList.remove('selected');
-    btn.classList.add('selected');
-    mode = btn.dataset.mode;
-    modeBlurbEl.textContent = MODE_BLURBS[mode];
-    learnOptsEl.classList.toggle('hidden', mode !== 'learn');
-    lenOptsEl.classList.toggle('hidden', mode !== 'words');
-    renderScores();
-  });
+/* Each menu group is pick-one-of-many: move the highlight, apply the choice,
+ * redraw the scoreboard (every choice changes which bests are shown). */
+function wireExclusive(selector, apply) {
+  const group = document.querySelectorAll(selector);
+  for (const el of group) {
+    el.addEventListener('click', () => {
+      for (const other of group) other.classList.remove('selected');
+      el.classList.add('selected');
+      apply(el);
+      renderScores();
+    });
+  }
 }
-for (const chip of document.querySelectorAll('.len-chip')) {
-  chip.addEventListener('click', () => {
-    for (const c of document.querySelectorAll('.len-chip')) c.classList.remove('selected');
-    chip.classList.add('selected');
-    wordLen = chip.dataset.len;
-    renderScores();
-  });
-}
-for (const card of document.querySelectorAll('.lesson-card')) {
-  card.addEventListener('click', () => {
-    for (const c of document.querySelectorAll('.lesson-card')) c.classList.remove('selected');
-    card.classList.add('selected');
-    lesson = card.dataset.lesson;
-    renderScores();
-  });
-}
+
+wireExclusive('#modeSeg .seg-btn', (btn) => {
+  mode = btn.dataset.mode;
+  modeBlurbEl.textContent = MODE_BLURBS[mode];
+  learnOptsEl.classList.toggle('hidden', mode !== 'learn');
+  lenOptsEl.classList.toggle('hidden', mode !== 'words');
+});
+wireExclusive('.len-chip', (chip) => { wordLen = chip.dataset.len; });
+wireExclusive('.lesson-card', (card) => { lesson = card.dataset.lesson; });
 hardChip.addEventListener('click', () => {
   hardMode = !hardMode;
   hardChip.classList.toggle('on', hardMode);
@@ -1179,29 +1175,20 @@ window.addEventListener('focus', () => {
  * ------------------------------------------------------------------ */
 function drawMascot(cv, pal, shut) {
   const c = cv.getContext('2d');
-  const rr = (x, y, w, h, r) => {
-    c.beginPath();
-    c.moveTo(x + r, y);
-    c.arcTo(x + w, y, x + w, y + h, r);
-    c.arcTo(x + w, y + h, x, y + h, r);
-    c.arcTo(x, y + h, x, y, r);
-    c.arcTo(x, y, x + w, y, r);
-    c.closePath();
-  };
   c.clearRect(0, 0, 160, 160);
   // Key side, then the dished face, same build as the falling caps.
   c.fillStyle = pal.side;
-  rr(18, 38, 124, 110, 24);
+  roundRect(c, 18, 38, 124, 110, 24);
   c.fill();
   const g = c.createLinearGradient(0, 28, 0, 140);
   g.addColorStop(0, pal.hi);
   g.addColorStop(1, pal.lo);
   c.fillStyle = g;
-  rr(18, 28, 124, 110, 24);
+  roundRect(c, 18, 28, 124, 110, 24);
   c.fill();
   c.strokeStyle = 'rgba(255, 255, 255, 0.35)';
   c.lineWidth = 3;
-  rr(24, 34, 112, 98, 19);
+  roundRect(c, 24, 34, 112, 98, 19);
   c.stroke();
   // Cheeks.
   c.fillStyle = 'rgba(255, 110, 110, 0.38)';
