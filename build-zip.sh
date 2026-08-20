@@ -85,6 +85,7 @@ exclude_dirs=(--exclude='ClacketyClack Dist/' --exclude='ClacketyClack Git/'
 # Housekeeping that ships in the Git zip but never in the Dist zip or the
 # run mirrors: the deployable is runtime files only.
 housekeeping_excludes=(--exclude='README.md' --exclude='CHANGELOG.md' --exclude='VERSION'
+                       --exclude='LICENSE'
                        --exclude='.gitignore' --exclude='.gitattributes'
                        --exclude='build-zip.sh' --exclude='deploy/' --exclude='tools/'
                        --exclude='screenshots/'

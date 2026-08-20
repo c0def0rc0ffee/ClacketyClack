@@ -79,6 +79,10 @@ Best scores are kept per mode and speed in `localStorage`. When the game is serv
 
 `./build-zip.sh` bumps the build number in `VERSION`, stamps it onto the menu, and produces a deployable zip plus a source zip, mirroring the deployable into the local web root if one is set up. `npm run deploy` then uploads the built site. Credentials live outside the repo entirely; the build script and `.gitignore` both carry backstop patterns so none can ever ride along.
 
+## Licensing
+
+The game (code, art, word lists) is [MIT licensed](LICENSE). The two bundled fonts keep their own licenses, both the SIL Open Font License 1.1: [Fredoka](https://fonts.google.com/specimen/Fredoka) and Semi-Coder (copyright 2016 Walter E Stewart, Reserved Font Name "Semi-Coder").
+
 ## Roadmap
 
 [TEACHING-MODES.md](TEACHING-MODES.md) is the menu of where Learn mode can go next: phonics and word families, spelling with speech synthesis, times tables, translation pairs, custom word lists for this week's homework, and calm mode for classrooms. The shape and colour lessons came off that list; the rest are waiting their turn.
