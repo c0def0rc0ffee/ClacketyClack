@@ -1,0 +1,7 @@
+# The webspace's Apache serves .webmanifest with no Content-Type at all, so the
+# browser gets an untyped manifest. Name the types it does not know here.
+<IfModule mod_mime.c>
+    AddType application/manifest+json .webmanifest
+    AddType image/webp               .webp
+    AddType image/svg+xml            .svg
+</IfModule>
