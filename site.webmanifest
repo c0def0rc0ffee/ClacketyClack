@@ -1,0 +1,16 @@
+{
+  "name": "Clackety Clack",
+  "short_name": "Clackety Clack",
+  "description": "A full screen typing game. Type the falling keycaps before they splash into the sea.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#1a2430",
+  "theme_color": "#1a2430",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "favicon-32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
