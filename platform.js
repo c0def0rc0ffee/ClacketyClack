@@ -40,10 +40,13 @@ const ccAccount = {
 /** fetch that never throws and never blocks the game. */
 async function ccFetch(path, options) {
   try {
-    const res = await fetch(CC_API + path, Object.assign({
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-    }, options || {}));
+    const opts = Object.assign({ credentials: 'include' }, options || {});
+    // Only POSTs carry JSON; a Content-Type on a GET turns the request
+    // non-simple and costs an extra CORS preflight for nothing.
+    if (opts.body) {
+      opts.headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers);
+    }
+    const res = await fetch(CC_API + path, opts);
     if (!res.ok) return null;
     return await res.json();
   } catch {
@@ -84,9 +87,13 @@ async function ccRefresh() {
  * between machines; neither can lower the other.
  */
 function ccBestFor(key) {
-  const local = Number(localStorage.getItem(key) || 0);
+  let local = 0;
+  // Guarded twice over: storage access can throw outright in locked-down
+  // browsers, and a hand-edited value would otherwise turn the slot into
+  // NaN forever (Math.max never displaces NaN).
+  try { local = Number(localStorage.getItem(key) || 0); } catch { local = 0; }
   const cloud = Number(ccAccount.bests[key] || 0);
-  return Math.max(local, cloud);
+  return Math.max(Number.isFinite(local) ? local : 0, Number.isFinite(cloud) ? cloud : 0);
 }
 
 /**

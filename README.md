@@ -81,7 +81,7 @@ Best scores are kept per mode and speed in `localStorage`. When the game is serv
 
 ## Licensing
 
-The game (code, art, word lists) is [MIT licensed](LICENSE). The two bundled fonts keep their own licenses, both the SIL Open Font License 1.1: [Fredoka](https://fonts.google.com/specimen/Fredoka) and Semi-Coder (copyright 2016 Walter E Stewart, Reserved Font Name "Semi-Coder").
+The game (code, art, word lists) is [MIT licensed](LICENSE). The two bundled fonts keep their own licenses, both the SIL Open Font License 1.1: [Fredoka](https://fonts.google.com/specimen/Fredoka) and Semi-Coder (copyright 2016 Walter E Stewart, Reserved Font Name "Semi-Coder"). The full license text with both copyright notices ships alongside the fonts as [`font/OFL.txt`](font/OFL.txt).
 
 ## Roadmap
 

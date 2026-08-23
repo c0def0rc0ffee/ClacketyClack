@@ -21,6 +21,12 @@ const SRC = join(ROOT, 'ClacketyClack Web');
 const REMOTE_ROOT = '/clacketyclack';
 
 const args = new Set(process.argv.slice(2));
+for (const arg of args) {
+  if (arg !== '--dry-run' && arg !== '--no-prune') {
+    console.error(`Unknown flag '${arg}'. Valid flags: --dry-run, --no-prune`);
+    process.exit(1);
+  }
+}
 const DRY_RUN = args.has('--dry-run');
 const PRUNE = !args.has('--no-prune');
 
@@ -67,6 +73,20 @@ function localFiles(dir, base = dir, out = []) {
   return out;
 }
 
+// Sanity guard before any remote work: pruning mirrors the local file set, so
+// an empty or partial 'ClacketyClack Web' would wipe the remote site. A real
+// bundle always has index.html and comfortably more than ten files.
+const wanted = new Set(localFiles(SRC));
+console.log(`local site: ${wanted.size} files`);
+if (!wanted.has('index.html') || wanted.size < 10) {
+  console.error(
+    `Refusing to deploy: '${SRC}' holds ${wanted.size} files` +
+      (wanted.has('index.html') ? '' : ' and no index.html') +
+      '. Run ./build-zip.sh first; deploying this would prune the remote site.',
+  );
+  process.exit(1);
+}
+
 const sftp = new Client();
 let uploaded = 0;
 sftp.on('upload', () => {
@@ -81,9 +101,6 @@ await sftp.connect({
   readyTimeout: 30000,
   retries: 3,
 });
-
-const wanted = new Set(localFiles(SRC));
-console.log(`local site: ${wanted.size} files`);
 
 if (!DRY_RUN) {
   console.log(`uploading to ${REMOTE_ROOT}…`);
@@ -103,7 +120,9 @@ async function remoteFiles(dir = REMOTE_ROOT, out = []) {
   return out;
 }
 
-const remote = await remoteFiles().catch(() => []);
+// No .catch here: a failed listing must abort loudly, because an empty list
+// would masquerade as "nothing to prune" while the remote could hold strays.
+const remote = await remoteFiles();
 const strays = remote.filter((f) => !wanted.has(f));
 
 if (!PRUNE) {
@@ -118,6 +137,43 @@ if (!PRUNE) {
   }
 }
 
-const finalCount = (await remoteFiles().catch(() => [])).length;
-console.log(`\nremote ${REMOTE_ROOT} holds ${finalCount} files (local has ${wanted.size})`);
+// Every directory below REMOTE_ROOT, deepest first, so a directory emptied by
+// pruning (or by removing its now-empty children) gets swept up too.
+async function remoteDirs(dir = REMOTE_ROOT, out = []) {
+  for (const e of await sftp.list(dir)) {
+    if (e.type === 'd') {
+      const full = `${dir}/${e.name}`;
+      out.push(full);
+      await remoteDirs(full, out);
+    }
+  }
+  return out;
+}
+
+if (PRUNE && !DRY_RUN) {
+  const dirs = (await remoteDirs()).sort(
+    (a, b) => b.split('/').length - a.split('/').length,
+  );
+  for (const d of dirs) {
+    if ((await sftp.list(d)).length > 0) continue;
+    // rmdir failures (race, permissions) are not worth crashing a finished
+    // deploy over; the directory just stays behind until the next run.
+    try {
+      await sftp.rmdir(d);
+      console.log(`  - removed empty dir ${relative(REMOTE_ROOT, d)}`);
+    } catch {
+      console.warn(`  ! could not remove empty dir ${relative(REMOTE_ROOT, d)}`);
+    }
+  }
+}
+
+try {
+  const finalCount = (await remoteFiles()).length;
+  console.log(`\nremote ${REMOTE_ROOT} holds ${finalCount} files (local has ${wanted.size})`);
+} catch (err) {
+  console.warn(
+    `\nWARNING: could not list ${REMOTE_ROOT} after deploying, so the final ` +
+      `file count is unverified (${err.message})`,
+  );
+}
 await sftp.end();
