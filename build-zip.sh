@@ -43,9 +43,11 @@ command -v zip   >/dev/null || die "zip not found. Install it: sudo apt install 
 command -v rsync >/dev/null || die "rsync not found. Install it: sudo apt install rsync"
 
 # Version scheme is major.minor.BUILD: every packaged build moves the third
-# segment on (1.0.0 to 1.0.1), written back to VERSION here so the zips carry
-# the new number. Major and minor move only when Rob says so. Edit VERSION by
-# hand for those; the build segment then restarts from whatever is written.
+# segment on (1.0.0 to 1.0.1). The bumped number is used throughout the build
+# but only written back to VERSION (and package.json) at the very end, once
+# every packaging step has succeeded: a failed build must not eat a number.
+# Major and minor move only when Rob says so. Edit VERSION by hand for those;
+# the build segment then restarts from whatever is written.
 version_file="$root/VERSION"
 version="$(tr -d '[:space:]' < "$version_file")"
 [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] \
@@ -54,7 +56,6 @@ if [[ $NO_BUMP -eq 1 ]]; then
     echo "Building v$version (hand-set, --no-bump)"
 else
     version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
-    printf '%s\n' "$version" > "$version_file"
     echo "Building v$version (build segment moved on)"
 fi
 
@@ -83,8 +84,10 @@ exclude_dirs=(--exclude='ClacketyClack Dist/' --exclude='ClacketyClack Git/'
               --exclude='node_modules/' --exclude='.git/')
 
 # Housekeeping that ships in the Git zip but never in the Dist zip or the
-# run mirrors: the deployable is runtime files only.
-housekeeping_excludes=(--exclude='README.md' --exclude='CHANGELOG.md' --exclude='VERSION'
+# run mirrors: the deployable is runtime files only. '/*.md' catches every
+# root-level markdown file (README, CHANGELOG, TEACHING-MODES and any future
+# ones) without touching text files in subfolders like font/OFL.txt.
+housekeeping_excludes=(--exclude='/*.md' --exclude='VERSION'
                        --exclude='LICENSE'
                        --exclude='.gitignore' --exclude='.gitattributes'
                        --exclude='build-zip.sh' --exclude='deploy/' --exclude='tools/'
@@ -120,6 +123,18 @@ sed -i "s|<p class=\"version\" id=\"version\">dev</p>|<p class=\"version\" id=\"
 grep -q ">v$version<" "$deploy_stage/index.html" \
     || die "version stamp failed: the placeholder in index.html has moved"
 
+# Cache-bust the four long-cached assets: .htaccess serves js/css with a
+# year-long immutable cache, so every release must change their URLs. Only the
+# staged copy is stamped; the source index.html keeps plain paths. Font
+# preload/href lines (if present) are deliberately left alone, their bytes
+# never change between releases.
+sed -i -E \
+    -e "s#(src=\"(app|platform|wordDictionaries)\.js)\"#\1?v=$version\"#g" \
+    -e "s#(href=\"css/styles\.css)\"#\1?v=$version\"#g" \
+    "$deploy_stage/index.html"
+grep -q "src=\"app\.js?v=$version\"" "$deploy_stage/index.html" \
+    || die "cache-bust stamp failed: the app.js reference in index.html has moved"
+
 dist_zip="$dist_dir/$name-v$version.zip"
 make_zip "$deploy_stage" "$dist_zip"
 echo "Built: $dist_zip ($(zip_size_mb "$dist_zip") MB)"
@@ -150,6 +165,21 @@ done
 src_stage="$stage/src"
 rsync -a "${both_exclude_files[@]}" "${exclude_dirs[@]}" "$root/" "$src_stage/"
 
+# The staged tree carries the new number even though the repo copies are not
+# written until the end: the src zip must match the version it is named for.
+printf '%s\n' "$version" > "$src_stage/VERSION"
+sed -i "s|\"version\": \"[^\"]*\"|\"version\": \"$version\"|" "$src_stage/package.json"
+grep -q "\"version\": \"$version\"" "$src_stage/package.json" \
+    || die "version sync failed: the version field in package.json has moved"
+
 git_zip="$git_dir/$name-v$version-src.zip"
 make_zip "$src_stage" "$git_zip"
 echo "Built: $git_zip ($(zip_size_mb "$git_zip") MB)"
+
+# Everything above succeeded, so the bumped number may now be persisted: write
+# VERSION and sync package.json's version field to match.
+if [[ $NO_BUMP -eq 0 ]]; then
+    printf '%s\n' "$version" > "$version_file"
+    sed -i "s|\"version\": \"[^\"]*\"|\"version\": \"$version\"|" "$root/package.json"
+    echo "Recorded: VERSION and package.json now say $version"
+fi

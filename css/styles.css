@@ -8,6 +8,9 @@
 @font-face {
   font-family: 'Semi-Coder';
   src: url('../font/Semi-Coder-Regular.otf') format('opentype');
+  /* One static weight covering the whole range: the browser uses the real
+     face at 600/700 instead of smearing a synthetic bold over a monospace. */
+  font-weight: 400 700;
   font-display: swap;
 }
 
@@ -36,14 +39,47 @@ body {
   background: #1a2430;
   font-family: 'Semi-Coder', 'Courier New', monospace;
   color: var(--text);
+  -webkit-user-select: none;
   user-select: none;
 }
 
-/* The whole game renders here, edge to edge */
+/* The whole game renders here, edge to edge. dvh tracks the viewport the
+   canvas backing store is sized from (innerHeight), so mobile browser
+   chrome never stretches the scene or hides the kill line; vh is the
+   fallback for browsers without dvh. */
 #game {
   display: block;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
+}
+
+/* Visually hidden, still read out: the aria-live game status mirror */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The hidden field that summons the virtual keyboard on touchscreens.
+   Not display:none (that would refuse focus); 16px stops iOS zooming. */
+#touchInput {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  border: 0;
+  padding: 0;
+  font-size: 16px;
+  pointer-events: none;
 }
 
 .hidden {
@@ -97,6 +133,9 @@ body {
   pointer-events: none;
   min-height: 2.2rem;
   white-space: nowrap;
+  max-width: 96vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 #typed::after {
@@ -150,7 +189,7 @@ body {
   color: var(--hard);
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.75);
   pointer-events: none;
-  white-space: nowrap;
+  max-width: 92vw;
   opacity: 0;
 }
 
@@ -175,6 +214,7 @@ body {
 .overlay {
   position: fixed;
   inset: 0;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -183,7 +223,14 @@ body {
   padding: 4vh 20px;
   background: radial-gradient(ellipse at 50% 40%, rgba(8, 13, 20, 0.25), rgba(8, 13, 20, 0.66) 90%);
   text-align: center;
+  overflow-y: auto;
 }
+
+/* Auto margins on the ends keep the content centred when it fits, but let
+   it scroll from the top when it does not; plain justify-content:center
+   would clip BOTH ends of a too-tall menu with no way to reach them. */
+.overlay > :first-child { margin-top: auto; }
+.overlay > :last-child { margin-bottom: auto; }
 
 /* Cartoon logo: fat rounded letters with a thick dark outline and a hard
    drop, the same sticker look the Worms style titles use. */
@@ -442,15 +489,24 @@ body {
     0 4px 10px -6px rgba(0, 0, 0, 0.65);
 }
 
-.keybtn:focus-visible {
+.keybtn:focus-visible,
+.seg-btn:focus-visible,
+.lesson-card:focus-visible,
+.len-chip:focus-visible,
+.toggle:focus-visible,
+#soundToggle:focus-visible,
+#menuBtn:focus-visible,
+.account-line a:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 3px;
 }
 
 .keybtn.easy { background: var(--easy); }
 .keybtn.medium { background: var(--medium); }
-.keybtn.hard { background: var(--hard); color: #fff; }
-.keybtn.ultimate { background: var(--ultimate); color: #fff; }
+/* Dark ink on the red and purple caps too: white on either fails WCAG AA
+   contrast, and the ink already carries the other two. */
+.keybtn.hard { background: var(--hard); }
+.keybtn.ultimate { background: var(--ultimate); }
 .keybtn.neutral { background: #8ba0b3; }
 
 .final-score {
@@ -467,8 +523,11 @@ body {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
-/* End of round review: the words that got away */
+/* End of round review: the words that got away. Selectable on purpose so
+   the practise list can be copied out. */
 .review {
+  -webkit-user-select: text;
+  user-select: text;
   max-width: min(86vw, 56ch);
   padding: 10px 18px;
   border-radius: 12px;
@@ -611,7 +670,7 @@ body {
 /* In-game menu button, sitting beside the sound toggle */
 #menuBtn {
   position: fixed;
-  top: 14px;
+  top: 12px;
   right: 66px;
   z-index: 5;
   font-family: 'Fredoka', system-ui, sans-serif;
@@ -643,3 +702,22 @@ body {
 /* Second lesson row (the shapes): a touch of air between the word row
  * above and this one */
 .lesson-grid + .lesson-grid { margin-top: 10px; }
+
+/* Narrow screens: the centred lesson banner would sit on top of the HUD
+ * and the corner buttons, so drop it below them */
+@media (max-width: 900px) {
+  #lessonBanner { top: 76px; max-width: 92vw; }
+  #typed { font-size: 1.3rem; letter-spacing: 2px; }
+}
+
+/* Vestibular safety: no blinking, shaking or tilting for players who have
+ * asked the OS for reduced motion. The game itself still plays; app.js
+ * also freezes the backdrop drift and the screen shake. */
+@media (prefers-reduced-motion: reduce) {
+  #typed::after { animation: none; }
+  #typed.dead-end { animation: none; }
+  .lesson-card:hover { transform: none; }
+  .keybtn:hover { transform: none; }
+  .mascot.left,
+  .mascot.right { transform: none; }
+}

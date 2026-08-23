@@ -1,5 +1,16 @@
 # ClacketyClack Teaching Modes: Design Report
 
+## Status (2026-08-23)
+
+The suggested first slice at the bottom of this document has shipped: vowels mode (A1),
+parts of speech with banners (B1), the hard mode distractor toggle (E1), and the
+missed-words review on the game over screen (E4), plus seven shape and colour lessons
+that were not in the original survey. Everything below this section predates that
+implementation and is left as written; read it as the menu of what could come next, not
+as a description of the current code.
+
+---
+
 A survey of ways to turn the game into a teaching tool. No code changes yet, this is the
 menu of options. Modes are grouped by what they teach, followed by cross-cutting mechanics
 (hard mode, spaced repetition, custom lists) and implementation notes on how the current

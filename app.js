@@ -150,6 +150,12 @@ const accountLineEl = document.getElementById('accountLine');
 const earnedEl = document.getElementById('earned');
 const menuBtn = document.getElementById('menuBtn');
 const lenOptsEl = document.getElementById('lenOpts');
+const srStatusEl = document.getElementById('srStatus');
+const touchInput = document.getElementById('touchInput');
+
+/* Honoured everywhere something blinks, shakes or drifts. */
+const REDUCED_MOTION = !!(window.matchMedia
+  && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 /* ------------------------------------------------------------------ *
  * State
@@ -200,9 +206,16 @@ let audio = null;
 function playTone(freq, dur, type, gainVal) {
   if (!soundOn) return;
   if (!audio) {
+    // Never create the context before the first ever gesture: Safari would
+    // start it suspended and the whole session would be silent. The first
+    // tone can come from the game loop (a splash), hence the check.
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
     try { audio = new (window.AudioContext || window.webkitAudioContext)(); }
     catch { return; }
   }
+  // And if it was suspended anyway, any tone played during a real gesture
+  // (a keypress, a click) revives it.
+  if (audio.state === 'suspended') audio.resume().catch(() => {});
   const osc = audio.createOscillator();
   const gain = audio.createGain();
   osc.type = type;
@@ -225,6 +238,7 @@ const sfx = {
 soundBtn.addEventListener('click', () => {
   soundOn = !soundOn;
   soundBtn.classList.toggle('muted', !soundOn);
+  soundBtn.setAttribute('aria-pressed', String(soundOn));
   soundBtn.blur();
 });
 
@@ -240,6 +254,9 @@ function resize() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
 window.addEventListener('resize', resize);
+/* Mobile browser chrome showing and hiding changes the visual viewport
+ * without always firing a window resize. */
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
 resize();
 
 /* The sea occupies the bottom of the screen; its surface is the kill line. */
@@ -408,7 +425,8 @@ function drawSea(t) {
 /* ------------------------------------------------------------------ *
  * Falling keycaps
  * ------------------------------------------------------------------ */
-const CAP_FONT = "22px 'Semi-Coder', 'Courier New', monospace";
+const capFont = (px) => `${px}px 'Semi-Coder', 'Courier New', monospace`;
+const CAP_FONT = capFont(22);
 // Warm the font up front so the first keycaps never render in the fallback.
 if (document.fonts && document.fonts.load) document.fonts.load(CAP_FONT, 'abc');
 const CAP_PAD_X = 14;
@@ -519,7 +537,7 @@ function drawCap(wrd) {
     return;
   }
   // Text: the typed prefix lights up in accent orange.
-  ctx.font = CAP_FONT;
+  ctx.font = wrd.font || CAP_FONT;
   ctx.textBaseline = 'middle';
   drawTypedText(wrd.text, wrd.typed, x, w, y + h / 2 + 1);
 }
@@ -574,7 +592,7 @@ function drawFloaters(dt) {
     const a = Math.max(0, 1 - f.life / f.max);
     if (a <= 0) continue;
     ctx.globalAlpha = a;
-    ctx.font = `700 ${Math.min(30, Math.round(20 + f.text.length * 1.5))}px Fredoka, system-ui, sans-serif`;
+    ctx.font = `600 ${Math.min(30, Math.round(20 + f.text.length * 1.5))}px Fredoka, system-ui, sans-serif`;
     ctx.lineWidth = 4;
     ctx.strokeStyle = 'rgba(12, 20, 28, 0.85)';
     ctx.strokeText(f.text, f.x, f.y);
@@ -679,8 +697,20 @@ function spawnWord() {
     w = reveal !== 'none'
       ? Math.max(SHAPE_CAP_W, Math.ceil(ctx.measureText(text).width) + 18)
       : SHAPE_CAP_W;
-  } else {
+  }
+  let font = null;
+  if (!isShape) {
     w = measureCap(text);
+    // A word wider than the window shrinks to fit: the player cannot type
+    // letters they cannot see (the 45 letter monsters on a narrow window).
+    if (w > W - 20) {
+      ctx.font = CAP_FONT;
+      const avail = Math.max(60, W - 20 - CAP_PAD_X * 2);
+      const px = Math.max(11, Math.floor((22 * avail) / ctx.measureText(text).width));
+      font = capFont(px);
+      ctx.font = font;
+      w = Math.max(CAP_H, Math.ceil(ctx.measureText(text).width) + CAP_PAD_X * 2);
+    }
   }
   const h = isShape ? SHAPE_CAP_H + (reveal !== 'none' ? SHAPE_NAME_H : 0) : CAP_H;
   let x = 0, tries = 0, overlap;
@@ -690,7 +720,11 @@ function spawnWord() {
     tries++;
   } while (overlap && tries < 30);
   words.push({
-    text, x, y: -h - 4, w, h, typed: 0, age: 0,
+    text, x, y: -h - 4, w, h, font,
+    // A cap spawning mid attempt joins the highlight straight away instead
+    // of waiting for the next keystroke to recompute it.
+    typed: buffer && text.startsWith(buffer) ? buffer.length : 0,
+    age: 0,
     isTarget: entry.isTarget, why: entry.why,
     shape: isShape ? text : null, reveal,
     glyphs: isShape ? LESSONS[lesson].glyphs : null,
@@ -717,11 +751,13 @@ function updateGame(dt) {
   }
   const vy = fallSpeed();
   const kill = waterY();
+  let removedAny = false;
   for (const wrd of [...words]) {
     wrd.age += dt;
     wrd.y += vy * dt;
     if (wrd.y + wrd.h >= kill) {
       removeWord(wrd);
+      removedAny = true;
       if (!wrd.isTarget) {
         // A trap fell in untyped: exactly right, small splash, no penalty.
         burst(wrd.x + wrd.w / 2, kill + 4, theme.waterTop, 12, 180, true);
@@ -742,15 +778,25 @@ function updateGame(dt) {
       loseLife();
     }
   }
+  // If the word being typed just drowned, the half typed prefix is junk
+  // that would silently dead end every further keystroke: clear it.
+  if (removedAny && buffer && !words.some((w) => w.text.startsWith(buffer))) {
+    setBuffer('');
+  }
 }
 
 function removeWord(wrd) {
-  words.splice(words.indexOf(wrd), 1);
+  const i = words.indexOf(wrd);
+  if (i !== -1) words.splice(i, 1);
 }
 
 function loseLife() {
-  lives--;
+  if (state !== 'playing') return;
+  lives = Math.max(0, lives - 1);
   refreshHud();
+  srStatusEl.textContent = lives > 0
+    ? `A word splashed. ${lives} ${lives === 1 ? 'life' : 'lives'} left.`
+    : 'Last life lost.';
   if (lives <= 0) endGame();
 }
 
@@ -831,9 +877,9 @@ function flashLesson(msg) {
 function refreshHud() {
   hudScore.textContent = `Score: ${score}`;
   hudLevel.textContent = mode === 'learn'
-    ? `${LESSONS[lesson].title}${hardMode ? ' (hard)' : ''} - ${SPEEDS[speed].label}`
+    ? `${LESSONS[lesson].title}${hardActive() ? ' (hard)' : ''} - ${SPEEDS[speed].label}`
     : `${SPEEDS[speed].label}${mode === 'letters' ? ' (letters)' : ` - ${LENGTHS[wordLen].label}`}`;
-  hudLives.textContent = '❤️'.repeat(lives) + '🖤'.repeat(LIVES - lives);
+  hudLives.textContent = '❤️'.repeat(Math.max(0, lives)) + '🖤'.repeat(Math.max(0, LIVES - lives));
 }
 
 function setBuffer(v) {
@@ -853,21 +899,13 @@ function deadEndFlash() {
   typedEl.classList.add('dead-end');
 }
 
-function onKey(e) {
-  if (state !== 'playing') return;
-  if (e.ctrlKey || e.altKey || e.metaKey) return;
-  if (e.key === 'Backspace') {
-    setBuffer(buffer.slice(0, -1));
-    e.preventDefault();
-    return;
-  }
-  if (e.key === 'Escape') {
-    setBuffer('');
-    return;
-  }
-  if (e.key.length !== 1) return;
-  const ch = e.key.toLowerCase();
-  if (!/[a-z]/.test(ch)) return;
+function processBackspace() {
+  setBuffer(buffer.slice(0, -1));
+}
+
+/* One typed letter, whichever keyboard it came from. */
+function processChar(ch) {
+  if (!/^[a-z]$/.test(ch)) return;
   sfx.clack();
 
   if (letterStyle()) {
@@ -889,10 +927,67 @@ function onKey(e) {
     setBuffer('');
     return;
   }
+  if (!words.some((w) => w.text.startsWith(next))) {
+    deadEndFlash();
+    // A buffer that is already a dead end never grows further: the first
+    // wrong letter shows and stings, but mashing cannot scroll the echo
+    // off the screen.
+    if (buffer && !words.some((w) => w.text.startsWith(buffer))) return;
+  }
   setBuffer(next);
-  if (!words.some((w) => w.text.startsWith(next))) deadEndFlash();
+}
+
+function onKey(e) {
+  if (state !== 'playing') return;
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+  if (e.key === 'Backspace') {
+    processBackspace();
+    e.preventDefault();
+    return;
+  }
+  if (e.key === 'Escape') {
+    setBuffer('');
+    return;
+  }
+  if (e.key.length !== 1) return;
+  // Auto repeat from a held key would machine gun the clack and, in the
+  // letters modes, pop every new matching cap for free.
+  if (e.repeat) return;
+  // A hardware key while the touch field is focused: handle it here and
+  // stop the insertion, or the input event would process it a second time.
+  if (e.target === touchInput) e.preventDefault();
+  processChar(e.key.toLowerCase());
 }
 document.addEventListener('keydown', onKey);
+
+/* ------------------------------------------------------------------ *
+ * Touch input: virtual keyboards mostly do not deliver usable keydown
+ * events, so a hidden focused field collects the edits instead. Its value
+ * always holds a one space sentinel; an insertion after it is a letter,
+ * a deletion of it is Backspace.
+ * ------------------------------------------------------------------ */
+const TOUCH_SENTINEL = ' ';
+const isTouchDevice = () => navigator.maxTouchPoints > 0;
+
+function armTouchInput() {
+  touchInput.value = TOUCH_SENTINEL;
+  touchInput.focus({ preventScroll: true });
+}
+
+canvas.addEventListener('pointerdown', () => {
+  if (state === 'playing' && isTouchDevice()) armTouchInput();
+});
+
+touchInput.addEventListener('input', () => {
+  const v = touchInput.value;
+  touchInput.value = TOUCH_SENTINEL;
+  if (state !== 'playing') return;
+  if (v.length < TOUCH_SENTINEL.length) {
+    processBackspace();
+    return;
+  }
+  for (const ch of v.slice(TOUCH_SENTINEL.length)) processChar(ch.toLowerCase());
+});
 
 /* ------------------------------------------------------------------ *
  * Screens
@@ -940,6 +1035,8 @@ function startGame(lvl) {
   }
   lessonMsgEl.classList.add('hidden');
   refreshHud();
+  srStatusEl.textContent = `Game started: ${roundLabel()}.`;
+  if (isTouchDevice()) armTouchInput();
   spawnWord();
 }
 
@@ -985,14 +1082,26 @@ function roundLabel() {
  * you last played long enough. Words-mode bests recorded before length
  * became its own control used the old shorter key and are simply no longer
  * read; the scoring formula changed under them anyway. */
+/* Hard mode only changes anything in lessons that HAVE traps; the shape
+ * and colour lessons have none, so for them the toggle must not fork the
+ * scoreboard or claim "(hard)" for identical play. */
+function lessonHasTraps(l = lesson) {
+  return LESSONS[l].distractors.length > 0;
+}
+
+function hardActive() {
+  return mode === 'learn' && hardMode && lessonHasTraps();
+}
+
 function bestKey(lvl = speed) {
   const dims = mode === 'learn'
-    ? '-' + lesson + (hardMode ? '-hard' : '') + '-'
+    ? '-' + lesson + (hardActive() ? '-hard' : '') + '-'
     : (mode === 'words' ? '-' + wordLen + '-' : '');
   return 'cc-best-' + mode + dims + lvl;
 }
 
 function endGame() {
+  if (state === 'gameover') return;
   state = 'gameover';
   words = [];
   sfx.over();
@@ -1000,7 +1109,9 @@ function endGame() {
   // The account may hold a higher score from another machine, so beat the
   // best of both. ccBestFor falls back to localStorage alone when signed out.
   const best = Math.max(score, ccBestFor(key));
-  localStorage.setItem(key, String(best));
+  // Quota, private browsing, policy: a refused write must not take the
+  // game over screen (and the whole render loop) down with it.
+  try { localStorage.setItem(key, String(best)); } catch { /* keep playing */ }
   finalScoreEl.textContent = `Score: ${score}`;
   const label = roundLabel();
   bestScoreEl.textContent = `Best (${label}): ${best}`;
@@ -1011,13 +1122,18 @@ function endGame() {
   lessonMsgEl.classList.add('hidden');
   menuBtn.classList.add('hidden');
   gameoverEl.classList.remove('hidden');
+  srStatusEl.textContent = `Game over. Score ${score}. Best ${best}.`;
+  touchInput.blur();
+  document.getElementById('btnRestart').focus();
 }
 
 /* Send the finished round to the platform and celebrate anything it earned.
  * Fire and forget: the game over screen is already up and nothing below is
  * allowed to hold it back or break it. Guests never get this far into the
  * server, which answers them a polite "not recorded". */
+let reportSeq = 0;
 function reportRound(key, best) {
+  const seq = ++reportSeq;
   earnedEl.classList.add('hidden');
   earnedEl.innerHTML = '';
   ccReportRound({
@@ -1025,7 +1141,7 @@ function reportRound(key, best) {
     level: speed,
     wordLen: mode === 'words' ? wordLen : '',
     lesson: mode === 'learn' ? lesson : '',
-    hard: mode === 'learn' && hardMode,
+    hard: hardActive(),
     score,
     wordsPopped: popped,
     charsTyped,
@@ -1033,6 +1149,9 @@ function reportRound(key, best) {
     mistakes: mistakes.length,
     durationSecs: Math.round(elapsed),
   }, key, best).then((fresh) => {
+    // A slow answer arriving after Play Again belongs to the previous
+    // round; a newer report owns the panel now.
+    if (seq !== reportSeq) return;
     renderScores();
     if (!fresh.length) return;
     const head = document.createElement('p');
@@ -1098,6 +1217,8 @@ function backToMenu() {
   state = 'menu';
   words = [];
   particles = [];
+  floaters = [];
+  touchInput.blur();
   renderScores();
   gameoverEl.classList.add('hidden');
   hud.classList.add('hidden');
@@ -1137,7 +1258,12 @@ wireExclusive('#modeSeg .seg-btn', (btn) => {
   lenOptsEl.classList.toggle('hidden', mode !== 'words');
 });
 wireExclusive('.len-chip', (chip) => { wordLen = chip.dataset.len; });
-wireExclusive('.lesson-card', (card) => { lesson = card.dataset.lesson; });
+wireExclusive('.lesson-card', (card) => {
+  lesson = card.dataset.lesson;
+  // No traps, no toggle: showing it for the shape and colour lessons would
+  // promise a change that never comes.
+  hardChip.classList.toggle('hidden', !lessonHasTraps());
+});
 hardChip.addEventListener('click', () => {
   hardMode = !hardMode;
   hardChip.classList.toggle('on', hardMode);
@@ -1145,9 +1271,14 @@ hardChip.addEventListener('click', () => {
   renderScores();
 });
 
-/* Deep link: #letters or #learn preselects that mode (bookmarkable). */
+/* Deep link: #letters or #learn preselects that mode (bookmarkable). The
+ * hash is validated before it goes anywhere near a selector: a stray quote
+ * or bracket in a shared link must not throw and kill the whole boot. */
 {
-  const linked = document.querySelector(`#modeSeg [data-mode="${location.hash.slice(1)}"]`);
+  const raw = location.hash.slice(1);
+  const linked = /^[a-z]+$/.test(raw)
+    ? document.querySelector(`#modeSeg [data-mode="${raw}"]`)
+    : null;
   if (linked) linked.click();
 }
 for (const btn of document.querySelectorAll('#menu .keybtn')) {
@@ -1168,6 +1299,41 @@ ccRefresh().then(renderScores);
 window.addEventListener('focus', () => {
   if (state === 'menu') ccRefresh().then(renderScores);
 });
+
+/* ------------------------------------------------------------------ *
+ * Auto pause: a visible but unfocused window (second monitor, a popup,
+ * the sign in tab) must not play itself to game over while the
+ * keystrokes land somewhere else. Any click or focus resumes.
+ * ------------------------------------------------------------------ */
+let autoPaused = false;
+window.addEventListener('blur', () => {
+  if (state === 'playing') autoPaused = true;
+});
+window.addEventListener('focus', () => {
+  if (autoPaused) {
+    autoPaused = false;
+    // The pause was dead time, not slow typing: restart the pace clock.
+    attemptStart = performance.now();
+  }
+});
+
+function drawPausedNote() {
+  ctx.save();
+  ctx.fillStyle = 'rgba(8, 13, 20, 0.45)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '600 44px Fredoka, system-ui, sans-serif';
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = 'rgba(12, 20, 28, 0.85)';
+  ctx.strokeText('Paused', W / 2, H * 0.42);
+  ctx.fillStyle = ACCENT;
+  ctx.fillText('Paused', W / 2, H * 0.42);
+  ctx.font = '400 18px Fredoka, system-ui, sans-serif';
+  ctx.fillStyle = INK;
+  ctx.fillText('Click the game to carry on', W / 2, H * 0.42 + 44);
+  ctx.restore();
+}
 
 /* ------------------------------------------------------------------ *
  * Menu mascots: two keycap characters flanking the title, blinking on
@@ -1281,18 +1447,33 @@ window.__cc = {
 };
 
 let last = performance.now();
+let menuFrameSkip = false;
 
 function frame(now) {
+  // Scheduled first, come what may: a throw anywhere below is one glitched
+  // frame, not a permanently dead game.
+  requestAnimationFrame(frame);
+
+  // Menus and the game over screen only animate the backdrop; half the
+  // frames are plenty there and the battery notices the difference.
+  menuFrameSkip = !menuFrameSkip;
+  if (state !== 'playing' && menuFrameSkip) return;
+
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  const t = now / 1000;
+  // Reduced motion: the backdrop holds still (t frozen) while gameplay
+  // itself carries on.
+  const t = REDUCED_MOTION ? 0 : now / 1000;
 
-  if (state === 'playing') updateGame(dt);
+  if (state === 'playing' && !autoPaused) updateGame(dt);
   if (state === 'menu') blinkMascots(now);
   if (shake > 0) shake = Math.max(0, shake - dt);
 
+  // A mid frame throw on an earlier frame could leave a stray transform
+  // on the stack; start every frame from a known one.
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.save();
-  if (shake > 0) {
+  if (shake > 0 && !REDUCED_MOTION) {
     ctx.translate((Math.random() - 0.5) * shake * 14, (Math.random() - 0.5) * shake * 14);
   }
   drawSky();
@@ -1304,8 +1485,7 @@ function frame(now) {
   drawSea(t);
   drawParticles(dt);
   drawFloaters(dt);
+  if (state === 'playing' && autoPaused) drawPausedNote();
   ctx.restore();
-
-  requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

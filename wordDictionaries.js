@@ -5,7 +5,7 @@
 const WORDS = [
   'about', 'accommodation', 'achievement', 'acknowledgement', 'acknowledgment', 'acquaintance', 'administration', 'advertisement',
   'after', 'against', 'all', 'almost', 'already', 'also', 'alternative', 'always',
-  'america', 'and', 'animals', 'announcement', 'another', 'answer', 'antidisestablishmentarianism', 'antitransubstantiationalist',
+  'and', 'animals', 'announcement', 'another', 'answer', 'antidisestablishmentarianism', 'antitransubstantiationalist',
   'any', 'application', 'appreciation', 'appropriate', 'around', 'availability', 'back', 'ball',
   'base', 'beautiful', 'been', 'before', 'believe', 'better', 'between', 'big',
   'bird', 'book', 'boy', 'brought', 'but', 'butterfly', 'call', 'called',
@@ -32,7 +32,7 @@ const WORDS = [
   'mathematics', 'may', 'me', 'mean', 'means', 'measure', 'meet', 'meteorologist',
   'microscope', 'mile', 'minute', 'modification', 'more', 'morning', 'most', 'mother',
   'mountains', 'move', 'much', 'must', 'my', 'name', 'near', 'necessary',
-  'need', 'negotiation', 'neighborhood', 'nevertheless', 'new', 'next', 'not', 'nothing',
+  'need', 'negotiation', 'neighbourhood', 'nevertheless', 'new', 'next', 'not', 'nothing',
   'now', 'number', 'observe', 'often', 'old', 'once', 'only', 'open',
   'opportunity', 'organisation', 'organization', 'other', 'otorhinolaryngological', 'our', 'over', 'own',
   'page', 'parastratiosphecomyiastratiosphecomyioides', 'part', 'participation', 'pass', 'pattern', 'people', 'performance',
@@ -46,7 +46,7 @@ const WORDS = [
   'significance', 'small', 'some', 'sometimes', 'song', 'soon', 'spectroheliokinematograph', 'spectrophotofluorometrically',
   'star', 'stay', 'still', 'stop', 'strawberry', 'study', 'subject', 'substantial',
   'such', 'suggestion', 'supercalifragilisticexpialidocious', 'surface', 'system', 'take', 'talk', 'telephone',
-  'tell', 'temperature', 'tetrahydrocannabinol', 'than', 'that', 'the', 'their', 'them',
+  'tell', 'temperature', 'than', 'that', 'the', 'their', 'them',
   'then', 'there', 'these', 'thing', 'think', 'this', 'though', 'three',
   'through', 'thunderstorm', 'thyrocalcitonin', 'thyroparathyroidectomized', 'time', 'together', 'told', 'tomorrow',
   'too', 'took', 'toward', 'town', 'transformation', 'transportation', 'tree', 'turn',
@@ -66,14 +66,14 @@ const WORDS = [
  * ------------------------------------------------------------------ */
 const LESSON_POS = {
   noun: [
-    'dog', 'cat', 'house', 'tree', 'book', 'chair', 'table', 'river',
+    'dog', 'kitten', 'house', 'tree', 'book', 'chair', 'table', 'river',
     'mountain', 'teacher', 'school', 'apple', 'garden', 'window', 'door', 'bird',
-    'car', 'train', 'beach', 'cloud', 'sister', 'brother', 'doctor', 'city',
+    'truck', 'train', 'beach', 'cloud', 'sister', 'brother', 'doctor', 'city',
     'farm', 'horse', 'milk', 'bread', 'shoe', 'clock', 'street', 'park',
     'ball', 'cake', 'king', 'queen', 'boat', 'spoon', 'pencil', 'monkey',
   ],
   verb: [
-    'run', 'jump', 'swim', 'eat', 'sleep', 'read', 'write', 'sing',
+    'run', 'jump', 'swim', 'eat', 'snooze', 'read', 'write', 'sing',
     'dance', 'throw', 'catch', 'climb', 'laugh', 'cry', 'shout', 'whisper',
     'drive', 'draw', 'paint', 'cook', 'wash', 'dig', 'push', 'pull',
     'kick', 'carry', 'build', 'listen', 'speak', 'think', 'dream', 'hide',

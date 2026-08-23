@@ -8,10 +8,12 @@
     <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <link rel="manifest" href="site.webmanifest" />
+    <link rel="preload" href="font/fredoka-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="font/Semi-Coder-Regular.otf" as="font" type="font/otf" crossorigin />
     <link rel="stylesheet" href="css/styles.css" />
 
     <meta name="description" content="A full screen typing game. Words tumble out of the sky as giant keycaps and you hammer them out of the air before they splash into the sea. Three hearts, four speeds, and a Learn mode for shapes, colours and parts of speech." />
-    <meta name="author" content="robford.org" />
+    <meta name="author" content="rob-ford.org" />
     <meta name="theme-color" content="#1a2430" />
     <link rel="canonical" href="https://clacketyclack.gamelabs.gg/" />
 
@@ -36,7 +38,15 @@
     <meta name="twitter:image:alt" content="The Clackety Clack menu: mode picker, word length chips and the four speed keycaps over a cartoon sea." />
   </head>
   <body>
-    <canvas id="game"></canvas>
+    <canvas id="game" role="img" aria-label="Game scene: words fall from the sky as keycaps toward the sea. Type them before they splash."></canvas>
+
+    <!-- Screen reader mirror of the things the canvas cannot announce. -->
+    <div id="srStatus" class="sr-only" aria-live="polite"></div>
+
+    <!-- Touchscreens have no keys until a field is focused: this hidden
+         input summons the virtual keyboard and feeds the same handlers. -->
+    <input id="touchInput" type="text" autocomplete="off" autocapitalize="none"
+           autocorrect="off" spellcheck="false" aria-hidden="true" tabindex="-1" />
 
     <!-- In-game HUD -->
     <div id="hud" class="hidden">
@@ -44,7 +54,7 @@
       <div id="hudLevel"></div>
       <div id="hudLives"></div>
     </div>
-    <button id="soundToggle" class="hidden" type="button" aria-label="Toggle sound">&#128266;</button>
+    <button id="soundToggle" class="hidden" type="button" aria-label="Toggle sound" aria-pressed="true">&#128266;</button>
     <button id="menuBtn" class="hidden" type="button" aria-label="Back to menu">Menu</button>
     <div id="typed" class="hidden"></div>
     <div id="lessonBanner" class="hidden"></div>
