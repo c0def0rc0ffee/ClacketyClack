@@ -1,7 +1,11 @@
-// Word list for ClacketyClack: one flat deduplicated array, bucketed at
-// runtime by the word length picker in app.js (LENGTHS: 1-4, 5-7, 8-12, 13+).
-// The old per-level arrays carried hundreds of duplicates and mis-bucketed
-// lengths; this is the same vocabulary, cleaned.
+/**
+ * <summary>
+ * Word list for ClacketyClack: one flat deduplicated array, bucketed at
+ * runtime by the word length picker in app.js (LENGTHS: 1-4, 5-7, 8-12,
+ * 13+). The old per-level arrays carried hundreds of duplicates and
+ * mis-bucketed lengths; this is the same vocabulary, cleaned.
+ * </summary>
+ */
 const WORDS = [
   'about', 'accommodation', 'achievement', 'acknowledgement', 'acknowledgment', 'acquaintance', 'administration', 'advertisement',
   'after', 'against', 'all', 'almost', 'already', 'also', 'alternative', 'always',

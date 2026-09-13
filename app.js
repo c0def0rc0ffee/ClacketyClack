@@ -1,8 +1,12 @@
-// ClacketyClack: a full screen typing game in the Furballistics cartoon style.
-// One canvas draws the whole scene (sky, sun, hills, clouds, scalloped sea and
-// the falling keycaps); the DOM supplies only the HUD and the menu overlays.
-// Words fall as keyboard keycaps; type them before they splash into the sea.
-// Three splashes and it is game over.
+/**
+ * <summary>
+ * ClacketyClack: a full screen typing game in the Furballistics cartoon
+ * style. One canvas draws the whole scene (sky, sun, hills, clouds,
+ * scalloped sea and the falling keycaps); the DOM supplies only the HUD
+ * and the menu overlays. Words fall as keyboard keycaps; type them before
+ * they splash into the sea. Three splashes and it is game over.
+ * </summary>
+ */
 
 'use strict';
 
@@ -877,8 +881,8 @@ function flashLesson(msg) {
 function refreshHud() {
   hudScore.textContent = `Score: ${score}`;
   hudLevel.textContent = mode === 'learn'
-    ? `${LESSONS[lesson].title}${hardActive() ? ' (hard)' : ''} - ${SPEEDS[speed].label}`
-    : `${SPEEDS[speed].label}${mode === 'letters' ? ' (letters)' : ` - ${LENGTHS[wordLen].label}`}`;
+    ? `${LESSONS[lesson].title}${hardActive() ? ' (hard)' : ''}, ${SPEEDS[speed].label}`
+    : `${SPEEDS[speed].label}${mode === 'letters' ? ' (letters)' : `, ${LENGTHS[wordLen].label}`}`;
   hudLives.textContent = '❤️'.repeat(Math.max(0, lives)) + '🖤'.repeat(Math.max(0, LIVES - lives));
 }
 
@@ -1162,7 +1166,7 @@ function reportRound(key, best) {
       const p = document.createElement('p');
       const strong = document.createElement('strong');
       strong.textContent = a.name;
-      p.append(strong, ` - ${a.desc}`);
+      p.append(strong, `: ${a.desc}`);
       earnedEl.append(p);
     }
     earnedEl.classList.remove('hidden');

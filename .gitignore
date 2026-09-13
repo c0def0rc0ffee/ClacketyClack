@@ -23,3 +23,8 @@ node_modules/
 *.pem
 *.key
 id_rsa*
+
+# Internal working documents: they name local filesystem paths and are not
+# meant for a public repository.
+CLAUDE.md
+Packaging.md

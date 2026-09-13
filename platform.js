@@ -1,13 +1,19 @@
-// GameLabs platform glue: sign-in awareness, score keeping and commendations.
-//
-// Everything here is OPTIONAL to the game. The API lives on another origin
-// (gamelabs.gg) and the session rides a .gamelabs.gg cookie, so a signed-out
-// player, a blocked request or a dead server must all end the same way: the
-// game plays exactly as it did before any of this existed, on localStorage
-// bests alone. Every call therefore swallows its own errors and answers with
-// something harmless rather than throwing into app.js.
-//
-// Loaded BEFORE app.js, so the helpers exist by the time the menu wires up.
+/**
+ * <summary>
+ * GameLabs platform glue: sign-in awareness, score keeping and
+ * commendations.
+ * </summary>
+ * <remarks>
+ * Everything here is OPTIONAL to the game. The API lives on another origin
+ * (gamelabs.gg) and the session rides a .gamelabs.gg cookie, so a signed-out
+ * player, a blocked request or a dead server must all end the same way: the
+ * game plays exactly as it did before any of this existed, on localStorage
+ * bests alone. Every call therefore swallows its own errors and answers with
+ * something harmless rather than throwing into app.js.
+ *
+ * Loaded BEFORE app.js, so the helpers exist by the time the menu wires up.
+ * </remarks>
+ */
 
 'use strict';
 

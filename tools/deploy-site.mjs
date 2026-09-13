@@ -1,6 +1,8 @@
 /**
+ * <summary>
  * Deploy the game bundle to the webspace over SFTP.
- *
+ * </summary>
+ * <remarks>
  *   node tools/deploy-site.mjs            upload, then delete remote strays
  *   node tools/deploy-site.mjs --dry-run  say what would happen, change nothing
  *   node tools/deploy-site.mjs --no-prune keep remote files we did not upload
@@ -9,8 +11,8 @@
  * stale; this never builds) into /clacketyclack on the webspace, the folder
  * mapped to clacketyclack.gamelabs.gg. Sibling folders belong to other sites
  * and are never touched; upload and prune both stay WITHIN /clacketyclack.
+ * </remarks>
  */
-
 import Client from 'ssh2-sftp-client';
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, dirname } from 'node:path';
